@@ -6,6 +6,7 @@ from collections import OrderedDict
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rc
+from matplotlib.pyplot import figure
 import random
 
 class Manual:
@@ -90,7 +91,7 @@ class Manual:
                     if not self.valid_key(curField):
                         continue
                     curValue = row[i]
-                    if curField in self.all_category_percentages and curValue in self.all_category_percentages[curField]:
+                    if curField in self.all_category_percentages and curValue in self.all_category_percentages[curField] and curValue != '':
                         percentage += self.all_category_percentages[curField][curValue]
 
                 if percentage > 0:
@@ -113,7 +114,7 @@ class Manual:
             print('Final Percentage Correct: ', 100 * (correct/(correct+incorrect)))
 
     def valid_key(self, key):
-        ignore = {'MachineIdentifier'}
+        ignore = {'MachineIdentifier', ''}
         return not key in ignore
 
     def get_percentages(self, no_virus_category: dict, has_virus_category: dict):
@@ -129,53 +130,46 @@ class Manual:
         return percentage
 
     def graph_percentages(self):
-        rc('font', weight='bold')
-
-        # # Values of each group
-        # bars1 = [12, 28, 1, 8, 22]
-        # bars2 = [28, 7, 16, 4, 10]
-        # bars3 = [25, 3, 23, 25, 17]
-        #
-        # # Heights of bars1 + bars2
-        # bars = np.add(bars1, bars2).tolist()
-        #
-        # # The position of the bars on the x-axis
-        # r = [0, 1, 2, 3, 4]
-        #
-        # # Names of group and bar width
-        # names = ['A', 'B', 'C', 'D', 'E']
-        # barWidth = 1
-        #
-        # # Create brown bars
-        # plt.bar(r, bars1, color='#7f6d5f', edgecolor='white', width=barWidth)
-        # # Create green bars (middle), on top of the firs ones
-        # plt.bar(r, bars2, bottom=bars1, color='#557f2d', edgecolor='white', width=barWidth)
-        # # Create green bars (top)
-        # plt.bar(r, bars3, bottom=bars, color='#2d7f5e', edgecolor='white', width=barWidth)
-        #
-        # # Custom X axis
-        # plt.xticks(r, names, fontweight='bold')
-        # plt.xlabel("group")
-        #
-        # # Show graphic
-        # plt.show()
-        position = 0
         for field in self.all_category_percentages:
-            if self.valid_key(field):
+            if not self.valid_key(field):
                 continue
-            if position > 3:
-                break
-            r = lambda: random.randint(0, 255)
-            color = '#%02X%02X%02X' % (r(), r(), r())
-            all_vals = list(self.all_category_percentages[field].values())
-            plt.bar([position] * len(all_vals), all_vals, color=color)
-            position += 1
-            # for key in self.all_category_percentages[field]:
-            #     val = self.all_category_percentages[field][key]
-            #     print()
+            save_folder = 'figures'
+            full_path = os.path.join(save_folder, field + '.png')
+            if os.path.exists(full_path):
+                print('Skipping', full_path, 'since it already exists.')
+                continue
 
-        plt.show()
-        print()
+            all_labels = list(self.all_category_percentages[field].keys())
+            all_vals = list(self.all_category_percentages[field].values())
+
+            print(field, 'size is', len(all_labels))
+
+
+            plt.rcdefaults()
+            fig, ax = plt.subplots()
+
+            y_pos = np.arange(len(all_labels))
+
+            for i, val in enumerate(all_vals):
+                if val < 0:
+                    color = 'green'
+                else:
+                    color = 'red'
+                ax.barh([i], val * -1, color=color, align='center')
+
+            ax.figure.set_size_inches(15, len(all_labels) * .2 + 5)
+            ax.set_yticks(y_pos)
+            ax.set_yticklabels(all_labels)
+            ax.invert_yaxis()
+            ax.set_xlabel('Has Virus Percent <-- 0 --> No Virus Percent ')
+            ax.set_xlim([-1, 1])
+            ax.set_title(field)
+
+            if not os.path.exists(save_folder):
+                os.mkdir(save_folder)
+
+            plt.savefig(full_path)
+            plt.close()
 
 def main():
     manual = Manual(os.path.join('..', 'microsoft-malware-prediction', 'train.csv'))
